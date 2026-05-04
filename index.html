@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Chat Online</title>
+</head>
+<body>
+
+<h2>Login</h2>
+<input id="nome" placeholder="Seu nome">
+<button onclick="entrar()">Entrar</button>
+
+<h3>Online</h3>
+<ul id="lista"></ul>
+
+<h3>Chat</h3>
+<div id="chat" style="height:200px; overflow-y:auto; border:1px solid #000;"></div>
+
+<input id="msg" placeholder="Digite mensagem">
+<button onclick="enviar()">Enviar</button>
+
+<script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+
+<script>
+let socket;
+
+function entrar() {
+    const nome = document.getElementById("nome").value;
+
+    if (!nome.trim()) {
+        alert("Digite um nome");
+        return;
+    }
+
+    socket = io("https://ladybug-radio-unfrosted.ngrok-free.dev", {
+        transports: ["websocket"]
+    });
+
+    socket.emit("login", {nome});
+
+    socket.on("erro", msg => {
+        alert(msg);
+    });
+
+    socket.on("usuarios", users => {
+        const lista = document.getElementById("lista");
+        lista.innerHTML = "";
+        users.forEach(u => {
+            lista.innerHTML += `<li>${u}</li>`;
+        });
+    });
+
+    socket.on("mensagem", data => {
+        const chat = document.getElementById("chat");
+        chat.innerHTML += `<p><b>${data.user}:</b> ${data.msg}</p>`;
+        chat.scrollTop = chat.scrollHeight; // auto scroll
+    });
+}
+
+function enviar() {
+    const input = document.getElementById("msg");
+    const msg = input.value;
+
+    if (!msg.trim()) return;
+
+    socket.emit("mensagem", {msg});
+    input.value = "";
+}
+
+// enviar com ENTER
+document.getElementById("msg").addEventListener("keypress", function(e) {
+    if (e.key === "Enter") {
+        enviar();
+    }
+});
+</script>
+
+</body>
+</html>
