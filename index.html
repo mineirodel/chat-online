@@ -5,15 +5,21 @@
 </head>
 <body>
 
-<h2>Login</h2>
-<input id="nome" placeholder="Seu nome">
-<button onclick="entrar()">Entrar</button>
+<h2>Login / Registro</h2>
 
-<h3>Online</h3>
+<input id="user" placeholder="Usuário">
+<input id="pass" type="password" placeholder="Senha">
+
+<button onclick="login()">Login</button>
+<button onclick="register()">Registrar</button>
+
+<hr>
+
+<h3>Usuários Online</h3>
 <ul id="lista"></ul>
 
 <h3>Chat</h3>
-<div id="chat" style="height:200px; overflow-y:auto; border:1px solid #000;"></div>
+<div id="chat" style="height:200px; overflow-y:auto; border:1px solid black;"></div>
 
 <input id="msg" placeholder="Digite mensagem">
 <button onclick="enviar()">Enviar</button>
@@ -23,23 +29,14 @@
 <script>
 let socket;
 
-function entrar() {
-    const nome = document.getElementById("nome").value;
-
-    if (!nome.trim()) {
-        alert("Digite um nome");
-        return;
-    }
-
+// conecta ao servidor
+function conectar() {
     socket = io("https://ladybug-radio-unfrosted.ngrok-free.dev", {
         transports: ["websocket"]
     });
 
-    socket.emit("login", {nome});
-
-    socket.on("erro", msg => {
-        alert(msg);
-    });
+    socket.on("erro", msg => alert(msg));
+    socket.on("sucesso", msg => alert(msg));
 
     socket.on("usuarios", users => {
         const lista = document.getElementById("lista");
@@ -52,15 +49,44 @@ function entrar() {
     socket.on("mensagem", data => {
         const chat = document.getElementById("chat");
         chat.innerHTML += `<p><b>${data.user}:</b> ${data.msg}</p>`;
-        chat.scrollTop = chat.scrollHeight; // auto scroll
+        chat.scrollTop = chat.scrollHeight;
     });
 }
 
+// login
+function login() {
+    const username = document.getElementById("user").value.trim();
+    const password = document.getElementById("pass").value.trim();
+
+    if (!username || !password) {
+        alert("Preencha tudo");
+        return;
+    }
+
+    conectar();
+    socket.emit("login", {username, password});
+}
+
+// registro
+function register() {
+    const username = document.getElementById("user").value.trim();
+    const password = document.getElementById("pass").value.trim();
+
+    if (!username || !password) {
+        alert("Preencha tudo");
+        return;
+    }
+
+    conectar();
+    socket.emit("register", {username, password});
+}
+
+// enviar mensagem
 function enviar() {
     const input = document.getElementById("msg");
-    const msg = input.value;
+    const msg = input.value.trim();
 
-    if (!msg.trim()) return;
+    if (!msg) return;
 
     socket.emit("mensagem", {msg});
     input.value = "";
