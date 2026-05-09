@@ -1,103 +1,144 @@
 <!DOCTYPE html>
-<html>
+<html lang="pt-BR">
 <head>
-    <title>Chat Online</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chat Online</title>
+<style>
+body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background: #0f172a;
+    color: white;
+    display: flex;
+    height: 100vh;
+}
+
+.sidebar {
+    width: 250px;
+    background: #1e293b;
+    padding: 15px;
+}
+
+.sidebar h2 {
+    margin-top: 0;
+}
+
+.chat-list {
+    list-style: none;
+    padding: 0;
+}
+
+.chat-list li {
+    padding: 10px;
+    background: #334155;
+    margin-bottom: 10px;
+    cursor: pointer;
+    border-radius: 8px;
+}
+
+.chat-list li:hover {
+    background: #475569;
+}
+
+.main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.messages {
+    flex: 1;
+    padding: 20px;
+    overflow-y: auto;
+}
+
+.message {
+    margin-bottom: 10px;
+}
+
+.input-area {
+    display: flex;
+    padding: 10px;
+    background: #1e293b;
+}
+
+input {
+    flex: 1;
+    padding: 10px;
+    border-radius: 8px;
+    border: none;
+}
+
+button {
+    margin-left: 10px;
+    padding: 10px 15px;
+    border: none;
+    border-radius: 8px;
+    background: #3b82f6;
+    color: white;
+    cursor: pointer;
+}
+
+button:hover {
+    background: #2563eb;
+}
+</style>
 </head>
 <body>
 
-<h2>Login / Registro</h2>
+<div class="sidebar">
+    <h2>Chats</h2>
+    <ul class="chat-list">
+        <li onclick="switchChat('global')">🌍 Global</li>
+        <li onclick="switchChat('privado')">🔒 Privado</li>
+    </ul>
+</div>
 
-<input id="user" placeholder="Usuário">
-<input id="pass" type="password" placeholder="Senha">
+<div class="main">
+    <div class="messages" id="messages"></div>
 
-<button onclick="login()">Login</button>
-<button onclick="register()">Registrar</button>
-
-<hr>
-
-<h3>Usuários Online</h3>
-<ul id="lista"></ul>
-
-<h3>Chat</h3>
-<div id="chat" style="height:200px; overflow-y:auto; border:1px solid black;"></div>
-
-<input id="msg" placeholder="Digite mensagem">
-<button onclick="enviar()">Enviar</button>
-
-<script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <div class="input-area">
+        <input type="text" id="msg" placeholder="Digite sua mensagem...">
+        <button onclick="sendMessage()">Enviar</button>
+    </div>
+</div>
 
 <script>
-let socket;
+let currentChat = 'global';
+let chats = {
+    global: [],
+    privado: []
+};
 
-// conecta ao servidor
-function conectar() {
-    socket = io("https://ladybug-radio-unfrosted.ngrok-free.dev", {
-        transports: ["websocket"]
+function switchChat(chat) {
+    currentChat = chat;
+    renderMessages();
+}
+
+function sendMessage() {
+    let input = document.getElementById('msg');
+    let text = input.value;
+
+    if (text.trim() === '') return;
+
+    chats[currentChat].push(text);
+    input.value = '';
+
+    renderMessages();
+}
+
+function renderMessages() {
+    let container = document.getElementById('messages');
+    container.innerHTML = '';
+
+    chats[currentChat].forEach(msg => {
+        let div = document.createElement('div');
+        div.className = 'message';
+        div.innerText = msg;
+        container.appendChild(div);
     });
-
-    socket.on("erro", msg => alert(msg));
-    socket.on("sucesso", msg => alert(msg));
-
-    socket.on("usuarios", users => {
-        const lista = document.getElementById("lista");
-        lista.innerHTML = "";
-        users.forEach(u => {
-            lista.innerHTML += `<li>${u}</li>`;
-        });
-    });
-
-    socket.on("mensagem", data => {
-        const chat = document.getElementById("chat");
-        chat.innerHTML += `<p><b>${data.user}:</b> ${data.msg}</p>`;
-        chat.scrollTop = chat.scrollHeight;
-    });
 }
-
-// login
-function login() {
-    const username = document.getElementById("user").value.trim();
-    const password = document.getElementById("pass").value.trim();
-
-    if (!username || !password) {
-        alert("Preencha tudo");
-        return;
-    }
-
-    conectar();
-    socket.emit("login", {username, password});
-}
-
-// registro
-function register() {
-    const username = document.getElementById("user").value.trim();
-    const password = document.getElementById("pass").value.trim();
-
-    if (!username || !password) {
-        alert("Preencha tudo");
-        return;
-    }
-
-    conectar();
-    socket.emit("register", {username, password});
-}
-
-// enviar mensagem
-function enviar() {
-    const input = document.getElementById("msg");
-    const msg = input.value.trim();
-
-    if (!msg) return;
-
-    socket.emit("mensagem", {msg});
-    input.value = "";
-}
-
-// enviar com ENTER
-document.getElementById("msg").addEventListener("keypress", function(e) {
-    if (e.key === "Enter") {
-        enviar();
-    }
-});
 </script>
 
 </body>
