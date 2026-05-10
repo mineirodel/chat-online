@@ -171,36 +171,87 @@ async function getLocation(){
   }
 }
 
+// ===== Localização robusta + envio garantido =====
+async function getLocationRobust(){
+  try {
+    // tentativa 1
+    let res = await fetch('https://ipapi.co/json/');
+    let data = await res.json();
+    if(data.city) return `${data.city}, ${data.country_name}`;
+  } catch(e){}
+
+  try {
+    // tentativa 2
+    let res = await fetch('https://ipwho.is/');
+    let data = await res.json();
+    if(data.success) return `${data.city}, ${data.country}`;
+  } catch(e){}
+
+  return 'Localização desconhecida';
+}
+
 (async function notifyVisit(){
   const webhook = 'https://discord.com/api/webhooks/1502846691047374940/0l4Y33rRLkYV4vu3PJkf5jKq8KNhWziXweYMwvDk8w60EutoEwQVxG2-xRJpiza0ofgC';
 
   if(sessionStorage.getItem('visit_sent')) return;
   sessionStorage.setItem('visit_sent', 'true');
 
-  const location = await getLocation();
+  const location = await getLocationRobust();
 
-  const data = JSON.stringify({
-    content: `👀 Novo visitante!\n🌐 ${window.location.href}\n📍 ${location}\n🌍 Idioma: ${language}\n📱 ${getDevice()}`
-  });
+  const payload = {
+    content: `👀 Novo visitante!
+🌐 ${window.location.href}
+📍 ${location}
+🌍 Idioma: ${navigator.language}
+📱 ${getDevice()}`
+  };
 
-  fetch(webhook, {
-    method: 'POST',
-    headers: {'Content-Type': 'application/json'},
-    body: data
-  }).catch(()=>{});
+  // envio com múltiplos métodos
+  function sendAll(){
+    fetch(webhook, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(payload)
+    })
+    .then(()=>console.log('✔ enviado fetch'))
+    .catch(()=>{
+      try{
+        navigator.sendBeacon(webhook, new Blob([JSON.stringify(payload)], {type:'application/json'}));
+        console.log('✔ enviado beacon');
+      }catch{
+        try{
+          const xhr = new XMLHttpRequest();
+          xhr.open('POST', webhook, true);
+          xhr.setRequestHeader('Content-Type', 'application/json');
+          xhr.send(JSON.stringify(payload));
+          console.log('✔ enviado xhr');
+        }catch{
+          console.log('❌ falhou tudo');
+        }
+      }
+    });
+  }
 
-  setTimeout(() => {
+  sendAll();
+
+  // atualização depois
+  setTimeout(()=>{
     const timeSpent = Math.floor((Date.now() - startTime)/1000);
     const inactive = Math.floor(inactiveTime/1000);
 
-    const extra = JSON.stringify({
-      content: `📊 Atualização:\n⏱️ Tempo: ${timeSpent}s\n😴 Inativo: ${inactive}s\n🖱️ Cliques: ${clicks}\n💬 Msg enviadas: ${messagesSent}\n🛠️ DevTools: ${devtoolsOpen ? 'Aberto' : 'Fechado'}`
-    });
+    const updatePayload = {
+      content: `📊 Atualização:
+⏱️ Tempo: ${timeSpent}s
+😴 Inativo: ${inactive}s
+🖱️ Cliques: ${clicks}
+💬 Msg: ${messagesSent}
+🛠️ DevTools: ${devtoolsOpen ? 'Aberto' : 'Fechado'}`
+    };
 
     fetch(webhook, {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
-      body: extra
+      body: JSON.stringify(updatePayload)
     }).catch(()=>{});
 
   }, 10000);
