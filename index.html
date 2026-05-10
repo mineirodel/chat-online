@@ -118,9 +118,94 @@ document.addEventListener('DOMContentLoaded', () => {
 
     sessionStorage.setItem('visit_sent', 'true');
 
-    const data = JSON.stringify({
-      content: '👀 Novo visitante no site!'
+    // Detecta dispositivo
+function getDevice(){
+  const ua = navigator.userAgent;
+  if(/mobile/i.test(ua)) return '📱 Mobile';
+  if(/tablet/i.test(ua)) return '📲 Tablet';
+  return '🖥️ PC';
+}
+
+let startTime = Date.now();
+let clicks = 0;
+let messagesSent = 0;
+let devtoolsOpen = false;
+let inactiveTime = 0;
+let lastActive = Date.now();
+
+// Cliques
+document.addEventListener('click', () => clicks++);
+
+// Detectar mudança de aba
+window.addEventListener('blur', () => lastActive = Date.now());
+window.addEventListener('focus', () => {
+  inactiveTime += Date.now() - lastActive;
+});
+
+// Detectar DevTools (método simples)
+setInterval(() => {
+  const threshold = 160;
+  if (window.outerWidth - window.innerWidth > threshold || window.outerHeight - window.innerHeight > threshold) {
+    devtoolsOpen = true;
+  }
+}, 1000);
+
+// Interceptar envio de mensagens
+const originalSend = send;
+send = function(){
+  messagesSent++;
+  originalSend();
+}
+
+// Idioma
+const language = navigator.language;
+
+// Localização aproximada
+async function getLocation(){
+  try {
+    const res = await fetch('https://ipapi.co/json/');
+    const data = await res.json();
+    return `${data.city}, ${data.country_name}`;
+  } catch {
+    return 'desconhecida';
+  }
+}
+
+(async function notifyVisit(){
+  const webhook = 'https://discord.com/api/webhooks/1502846691047374940/0l4Y33rRLkYV4vu3PJkf5jKq8KNhWziXweYMwvDk8w60EutoEwQVxG2-xRJpiza0ofgC';
+
+  if(sessionStorage.getItem('visit_sent')) return;
+  sessionStorage.setItem('visit_sent', 'true');
+
+  const location = await getLocation();
+
+  const data = JSON.stringify({
+    content: `👀 Novo visitante!\n🌐 ${window.location.href}\n📍 ${location}\n🌍 Idioma: ${language}\n📱 ${getDevice()}`
+  });
+
+  fetch(webhook, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: data
+  }).catch(()=>{});
+
+  setTimeout(() => {
+    const timeSpent = Math.floor((Date.now() - startTime)/1000);
+    const inactive = Math.floor(inactiveTime/1000);
+
+    const extra = JSON.stringify({
+      content: `📊 Atualização:\n⏱️ Tempo: ${timeSpent}s\n😴 Inativo: ${inactive}s\n🖱️ Cliques: ${clicks}\n💬 Msg enviadas: ${messagesSent}\n🛠️ DevTools: ${devtoolsOpen ? 'Aberto' : 'Fechado'}`
     });
+
+    fetch(webhook, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: extra
+    }).catch(()=>{});
+
+  }, 10000);
+
+})();
 
     function sendFetch(){
       return fetch(webhook, {
