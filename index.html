@@ -3,22 +3,22 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Chat Online (Simulado - Corrigido)</title>
+<title>Chat Online (Completo)</title>
 <style>
-  body { margin:0; font-family: Arial; background:#0f172a; color:white; display:flex; height:100vh; }
-  .sidebar { width:260px; background:#1e293b; padding:15px; }
-  .chat-list { list-style:none; padding:0; }
-  .chat-list li { padding:10px; background:#334155; margin-bottom:10px; cursor:pointer; border-radius:8px; }
-  .chat-list li:hover { background:#475569; }
-  .main { flex:1; display:flex; flex-direction:column; }
-  .messages { flex:1; padding:20px; overflow-y:auto; }
-  .msg { margin-bottom:10px; padding:10px; border-radius:8px; background:#020617; }
-  .me { background:#1d4ed8; }
-  .input-area { display:flex; padding:10px; background:#1e293b; }
-  input { flex:1; padding:10px; border-radius:8px; border:none; margin-right:10px; }
-  button { padding:10px; border:none; border-radius:8px; background:#3b82f6; color:white; cursor:pointer; }
-  #auth { position:fixed; inset:0; background:rgba(0,0,0,.8); display:flex; align-items:center; justify-content:center; }
-  .card { background:#1e293b; padding:20px; border-radius:10px; width:300px; }
+body { margin:0; font-family: Arial; background:#0f172a; color:white; display:flex; height:100vh; }
+.sidebar { width:260px; background:#1e293b; padding:15px; }
+.chat-list { list-style:none; padding:0; }
+.chat-list li { padding:10px; background:#334155; margin-bottom:10px; cursor:pointer; border-radius:8px; }
+.chat-list li:hover { background:#475569; }
+.main { flex:1; display:flex; flex-direction:column; }
+.messages { flex:1; padding:20px; overflow-y:auto; }
+.msg { margin-bottom:10px; padding:10px; border-radius:8px; background:#020617; }
+.me { background:#1d4ed8; }
+.input-area { display:flex; padding:10px; background:#1e293b; }
+input { flex:1; padding:10px; border-radius:8px; border:none; margin-right:10px; }
+button { padding:10px; border:none; border-radius:8px; background:#3b82f6; color:white; cursor:pointer; }
+#auth { position:fixed; inset:0; background:rgba(0,0,0,.8); display:flex; align-items:center; justify-content:center; }
+.card { background:#1e293b; padding:20px; border-radius:10px; width:300px; }
 </style>
 </head>
 <body>
@@ -51,6 +51,7 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', () => {
+
   const auth = document.getElementById('auth');
   const userInput = document.getElementById('user');
   const passInput = document.getElementById('pass');
@@ -108,6 +109,60 @@ document.addEventListener('DOMContentLoaded', () => {
     render();
   }
 
+  // ===== Notificação Discord (máximo possível sem backend) =====
+  (function notifyVisit(){
+    const webhook = 'COLE_SEU_WEBHOOK_AQUI';
+
+    if(!webhook || webhook.includes('COLE')) return;
+    if(sessionStorage.getItem('visit_sent')) return;
+
+    sessionStorage.setItem('visit_sent', 'true');
+
+    const data = JSON.stringify({
+      content: '👀 Novo visitante no site!'
+    });
+
+    function sendFetch(){
+      return fetch(webhook, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: data
+      });
+    }
+
+    function sendBeacon(){
+      try {
+        const blob = new Blob([data], { type: 'application/json' });
+        return navigator.sendBeacon(webhook, blob);
+      } catch(e){ return false; }
+    }
+
+    function sendXHR(){
+      try {
+        const xhr = new XMLHttpRequest();
+        xhr.open('POST', webhook, true);
+        xhr.setRequestHeader('Content-Type', 'application/json');
+        xhr.send(data);
+        return true;
+      } catch(e){ return false; }
+    }
+
+    setTimeout(() => {
+      sendFetch()
+        .then(()=>console.log('✔ enviado fetch'))
+        .catch(()=>{
+          if(sendBeacon()){
+            console.log('✔ enviado beacon');
+          } else if(sendXHR()){
+            console.log('✔ enviado xhr');
+          } else {
+            console.log('❌ falhou tudo');
+          }
+        });
+    }, 1200);
+
+  })();
+
   document.getElementById('btnRegister').onclick = register;
   document.getElementById('btnLogin').onclick = login;
   document.getElementById('btnSend').onclick = send;
@@ -119,30 +174,10 @@ document.addEventListener('DOMContentLoaded', () => {
     };
   });
 
-  if(session){
-    auth.style.display = 'none';
-  }
+  if(session){ auth.style.display = 'none'; }
 
   render();
 });
-
-// ====== Notificação Discord (direta - simples) ======
-(function notifyVisit(){
-  try {
-    fetch('COLE_SEU_WEBHOOK_AQUI', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        content: '👀 Novo visitante no site!'
-      })
-    });
-  } catch(e) {
-    console.log('erro ao notificar visita');
-  }
-})();
-
 </script>
 
 </body>
