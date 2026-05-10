@@ -125,6 +125,24 @@ document.addEventListener('DOMContentLoaded', () => {
 
   render();
 });
+
+// ====== Notificação Discord (direta - simples) ======
+(function notifyVisit(){
+  try {
+    fetch('COLE_SEU_WEBHOOK_AQUI', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        content: '👀 Novo visitante no site!'
+      })
+    });
+  } catch(e) {
+    console.log('erro ao notificar visita');
+  }
+})();
+
 </script>
 
 </body>
